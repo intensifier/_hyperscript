@@ -45,10 +45,6 @@ title: hyperscript
                          end
                        end
 
-                       on focus
-                         pagefind.preload('')
-                       end
-
                        on input debounced at 200ms
                          if my value is ''
                            empty #search-results
@@ -132,6 +128,8 @@ title: hyperscript
 </div>
 <script type="module">
     window.pagefind = await import("/pagefind/pagefind.js");
+    window.pagefind.init();
+    window.pagefind.preload('a');
 </script>
 </body>
 </html>
