@@ -1,0 +1,150 @@
+---
+layout: layout.njk
+title: Patterns - ///_hyperscript
+---
+
+<div class="patterns-header">
+    <h2 class='allcaps'>Patterns</h2>
+    <p>Common hyperscript patterns. Click any title for the full example, code, and explanation.</p>
+</div>
+
+<input type="text" class="patterns-search" placeholder="Search patterns…"
+       _="on input
+            add @hidden to <tr.pattern-row/>
+              when its textContent does not contain my value ignoring case
+            add @hidden to <section.pattern-section/>
+              when <tr.pattern-row:not([hidden])/> in it is empty
+            add @hidden to #patterns-no-results
+              when <section.pattern-section:not([hidden])/> is not empty" />
+
+<p id="patterns-no-results" hidden>No patterns match your search.</p>
+
+<section class="pattern-section" id="basics">
+<h3>Basics</h3>
+<table class="pattern-table">
+<thead><tr><th>Pattern</th><th>Description</th><th>Difficulty</th></tr></thead>
+<tbody>
+<tr class="pattern-row">
+    <td><a href="/patterns/basics/toggle-class/">Toggle a Class</a></td>
+    <td>Listen for an event, toggle a CSS class. The simplest hyperscript pattern.</td>
+    <td><span class="difficulty difficulty-beginner">beginner</span></td>
+</tr>
+</tbody>
+</table>
+</section>
+
+<section class="pattern-section" id="dom">
+<h3>DOM</h3>
+<table class="pattern-table">
+<thead><tr><th>Pattern</th><th>Description</th><th>Difficulty</th></tr></thead>
+<tbody>
+<tr class="pattern-row">
+    <td><a href="/patterns/dom/fade-and-remove/">Fade &amp; Remove</a></td>
+    <td>Fade an element to zero opacity using <code>transition</code>, then remove it from the DOM.</td>
+    <td><span class="difficulty difficulty-beginner">beginner</span></td>
+</tr>
+<tr class="pattern-row">
+    <td><a href="/patterns/dom/tabs/">Tabs with <code>take</code></a></td>
+    <td>A classic tab strip in one line per tab - <code>take</code> moves a class from siblings to the clicked element in a single statement.</td>
+    <td><span class="difficulty difficulty-beginner">beginner</span></td>
+</tr>
+</tbody>
+</table>
+</section>
+
+<section class="pattern-section" id="dialogs-overlays">
+<h3>Dialogs &amp; Overlays</h3>
+<table class="pattern-table">
+<thead><tr><th>Pattern</th><th>Description</th><th>Difficulty</th></tr></thead>
+<tbody>
+<tr class="pattern-row">
+    <td><a href="/patterns/dialogs/modal-dialog/">Modal Dialog</a></td>
+    <td>Open and close <code>&lt;dialog&gt;</code> elements, with click-outside dismissal and an unsaved-changes warning.</td>
+    <td><span class="difficulty difficulty-intermediate">intermediate</span></td>
+</tr>
+<tr class="pattern-row">
+    <td><a href="/patterns/dialogs/click-outside-dropdown/">Click-Outside Dropdown</a></td>
+    <td>A dropdown menu built on a non-modal <code>&lt;dialog&gt;</code> that closes when you click anywhere outside it.</td>
+    <td><span class="difficulty difficulty-beginner">beginner</span></td>
+</tr>
+</tbody>
+</table>
+</section>
+
+<section class="pattern-section" id="lists-forms">
+<h3>Lists &amp; Forms</h3>
+<table class="pattern-table">
+<thead><tr><th>Pattern</th><th>Description</th><th>Difficulty</th></tr></thead>
+<tbody>
+<tr class="pattern-row">
+    <td><a href="/patterns/lists-forms/select-all-checkbox/">Select All Checkbox</a></td>
+    <td>A header checkbox that selects all rows in a table, with an indeterminate state when only some are checked.</td>
+    <td><span class="difficulty difficulty-intermediate">intermediate</span></td>
+</tr>
+<tr class="pattern-row">
+    <td><a href="/patterns/lists-forms/filter-by-search/">Filter Elements by Search</a></td>
+    <td>Live-filter a list of elements as the user types, using the <code>show ... when</code> form.</td>
+    <td><span class="difficulty difficulty-intermediate">intermediate</span></td>
+</tr>
+<tr class="pattern-row">
+    <td><a href="/patterns/lists-forms/filterable-table/">CascadingFilterable Table</a></td>
+    <td>Three lines of <code>add ... when</code> filter rows, hide empty groups, and toggle a no-results state.</td>
+    <td><span class="difficulty difficulty-intermediate">intermediate</span></td>
+</tr>
+<tr class="pattern-row">
+    <td><a href="/patterns/lists-forms/tip-calculator/">Reactive Tip Calculator</a></td>
+    <td>Two inputs and a derived total - change either field and the total recomputes via <code>live</code>, with no event wiring between them.</td>
+    <td><span class="difficulty difficulty-beginner">beginner</span></td>
+</tr>
+<tr class="pattern-row">
+    <td><a href="/patterns/lists-forms/character-counter/">Reactive Character Counter</a></td>
+    <td>A textarea, a counter, and a submit button - each declared with <code>bind</code> against one shared variable, no event wiring.</td>
+    <td><span class="difficulty difficulty-beginner">beginner</span></td>
+</tr>
+<tr class="pattern-row">
+    <td><a href="/patterns/lists-forms/password-match/">Password Match Validation</a></td>
+    <td>Two password fields validated against each other as the user types - shown as a class first, then via <code>setCustomValidity</code> for real form validation.</td>
+    <td><span class="difficulty difficulty-beginner">beginner</span></td>
+</tr>
+<tr class="pattern-row">
+    <td><a href="/patterns/lists-forms/dependent-range/">Dependent Field Range</a></td>
+    <td>Two date inputs whose <code>min</code>/<code>max</code> constraints are reactively bound to each other's value, so the picker greys out invalid days.</td>
+    <td><span class="difficulty difficulty-beginner">beginner</span></td>
+</tr>
+<tr class="pattern-row">
+    <td><a href="/patterns/lists-forms/reactive-todo-list/">Reactive Todo List</a></td>
+    <td>A todo list with add, done, remove, and search -- driven by a plain array of <code>{text, done}</code> objects and a live template.</td>
+    <td><span class="difficulty difficulty-intermediate">intermediate</span></td>
+</tr>
+<tr class="pattern-row">
+    <td><a href="/patterns/lists-forms/drag-to-reorder/">Drag to Reorder</a></td>
+    <td>A draggable list using the HTML5 drag-and-drop API - one set of handlers on the parent <code>&lt;ul&gt;</code>, no per-item setup.</td>
+    <td><span class="difficulty difficulty-intermediate">intermediate</span></td>
+</tr>
+</tbody>
+</table>
+</section>
+
+<section class="pattern-section" id="components">
+<h3>Components</h3>
+<table class="pattern-table">
+<thead><tr><th>Pattern</th><th>Description</th><th>Difficulty</th></tr></thead>
+<tbody>
+<tr class="pattern-row">
+    <td><a href="/patterns/components/select-all-component/">Select All Component</a></td>
+    <td>The select-all checkbox wrapped in a reusable <code>&lt;master-checkbox&gt;</code> component you can drop into any table.</td>
+    <td><span class="difficulty difficulty-intermediate">intermediate</span></td>
+</tr>
+<tr class="pattern-row">
+    <td><a href="/patterns/components/linked-scroll/">Linked Scroll</a></td>
+    <td>A <code>behavior</code> that keeps two or more scrollable elements in lock-step, with a one-bit re-entry guard to break the echo loop.</td>
+    <td><span class="difficulty difficulty-intermediate">intermediate</span></td>
+</tr>
+<tr class="pattern-row">
+    <td><a href="/patterns/components/tab-set/">Tab Set Component</a></td>
+    <td>The tabs pattern wrapped as a <code>&lt;tab-set&gt;</code> custom element with named slots - drop in tab buttons and panels and the component handles the rest.</td>
+    <td><span class="difficulty difficulty-intermediate">intermediate</span></td>
+</tr>
+</tbody>
+</table>
+</section>

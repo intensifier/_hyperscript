@@ -1,85 +1,174 @@
-describe("the remove command", function () {
-	beforeEach(function () {
-		clearWorkArea();
-	});
-	afterEach(function () {
-		clearWorkArea();
+import {test, expect} from '../fixtures.js'
+
+test.describe("the remove command", () => {
+
+	test("can remove class ref on a single div", async ({html, find}) => {
+		await html("<div class='foo' _='on click remove .foo'></div>");
+		await expect(find('div')).toHaveClass(/foo/);
+		await find('div').dispatchEvent('click');
+		await expect(find('div')).not.toHaveClass(/foo/);
 	});
 
-	it("can remove class ref on a single div", function () {
-		var div = make("<div class='foo' _='on click remove .foo'></div>");
-		div.classList.contains("foo").should.equal(true);
-		div.click();
-		div.classList.contains("foo").should.equal(false);
+	test("can remove class ref on a single form", async ({html, find}) => {
+		await html("<form class='foo' _='on click remove .foo'></form>");
+		await expect(find('form')).toHaveClass(/foo/);
+		await find('form').dispatchEvent('click');
+		await expect(find('form')).not.toHaveClass(/foo/);
 	});
 
-	it("can remove class ref on a single form", function () {
-		var form = make("<form class='foo' _='on click remove .foo'></form>");
-		form.classList.contains("foo").should.equal(true);
-		form.click();
-		form.classList.contains("foo").should.equal(false);
+	test("can target another div for class ref", async ({html, find}) => {
+		await html("<div class='foo' id='bar'></div><div _='on click remove .foo from #bar'></div>");
+		await expect(find('#bar')).toHaveClass(/foo/);
+		await find('div:nth-of-type(2)').dispatchEvent('click');
+		await expect(find('#bar')).not.toHaveClass(/foo/);
 	});
 
-	it("can target another div for class ref", function () {
-		var bar = make("<div class='foo' id='bar'></div>");
-		var div = make("<div _='on click remove .foo from #bar'></div>");
-		bar.classList.contains("foo").should.equal(true);
-		div.classList.contains("foo").should.equal(false);
-		div.click();
-		bar.classList.contains("foo").should.equal(false);
-		div.classList.contains("foo").should.equal(false);
+	test("can remove non-class attributes", async ({html, find}) => {
+		await html("<div foo='bar' _='on click remove [@foo]'></div>");
+		await expect(find('div')).toHaveAttribute('foo', 'bar');
+		await find('div').dispatchEvent('click');
+		await expect(find('div')).not.toHaveAttribute('foo');
 	});
 
-	it("can remove non-class attributes", function () {
-		var div = make("<div foo='bar' _='on click remove [@foo]'></div>");
-		div.getAttribute("foo").should.equal("bar");
-		div.click();
-		div.hasAttribute("foo").should.equal(false);
+	test("can remove elements", async ({html, find, evaluate}) => {
+		await html("<div _='on click remove me'></div>");
+		await find('div').dispatchEvent('click');
+		await expect(find('div')).toHaveCount(0);
 	});
 
-	it("can remove elements", function () {
-		var div = make("<div _='on click remove me'></div>");
-		assert.isNotNull(div.parentElement);
-		div.click();
-		assert.isNull(div.parentElement);
+	test("can remove other elements", async ({html, find}) => {
+		await html("<div _='on click remove #that'></div><div id='that'></div>");
+		await expect(find('#that')).toHaveCount(1);
+		await find('div').first().dispatchEvent('click');
+		await expect(find('#that')).toHaveCount(0);
 	});
 
-	it("can remove other elements", function () {
-		var div = make("<div _='on click remove #that'></div>");
-		var div2 = make("<div id='that'></div>");
-		assert.isNotNull(div2.parentElement);
-		div.click();
-		assert.isNull(div2.parentElement);
+	test("can remove parent element", async ({html, find}) => {
+		await html("<div id='p1'><button id='b1' _=\"on click remove my.parentElement\"></button></div>");
+		await expect(find('#p1')).toHaveCount(1);
+		await find('#b1').dispatchEvent('click');
+		await expect(find('#p1')).toHaveCount(0);
 	});
 
-	it("can remove parent element", function () {
-		var div = make("<div id='p1'><button  id='b1' _=\"on click remove my.parentElement\"></button></div> ");
-		var btn = byId("b1");
-		assert.isNotNull(div.parentElement);
-		btn.click();
-		assert.isNull(div.parentElement);
+	test("can remove multiple class refs", async ({html, find}) => {
+		await html("<div class='foo bar doh' _='on click remove .foo .bar'></div>");
+		await expect(find('div')).toHaveClass(/foo/);
+		await expect(find('div')).toHaveClass(/bar/);
+		await expect(find('div')).toHaveClass(/doh/);
+		await find('div').dispatchEvent('click');
+		await expect(find('div')).not.toHaveClass(/foo/);
+		await expect(find('div')).not.toHaveClass(/bar/);
+		await expect(find('div')).toHaveClass(/doh/);
 	});
 
-	it("can remove multiple class refs", function () {
-		var div = make("<div class='foo bar doh' _='on click remove .foo .bar'></div>");
-		div.classList.contains("foo").should.equal(true);
-		div.classList.contains("bar").should.equal(true);
-		div.classList.contains("doh").should.equal(true);
-		div.click();
-		div.classList.contains("foo").should.equal(false);
-		div.classList.contains("bar").should.equal(false);
-		div.classList.contains("doh").should.equal(true);
+	test("can filter class removal via the when clause", async ({html, find}) => {
+		await html(
+			"<div id='trigger' _='on click remove .highlight from .item when it matches .old'></div>" +
+			"<div id='d1' class='item old highlight'></div>" +
+			"<div id='d2' class='item highlight'></div>"
+		);
+		await find('#trigger').dispatchEvent('click');
+		// d1 matches .old -> remove .highlight
+		await expect(find('#d1')).not.toHaveClass(/highlight/);
+		// d2 does not match .old -> reverse (add .highlight, but it already has it)
+		await expect(find('#d2')).toHaveClass(/highlight/);
 	});
 
-	it("can remove query refs from specific things", function () {
-		var div = make("<div><div id='d1' _='on click remove <p/> from me'><p>foo</p>bar</div><p>doh</p></div>");
-		var d1 = byId('d1');
-		div.innerHTML.includes("foo").should.equal(true);
-		div.innerHTML.includes("bar").should.equal(true);
-		div.innerHTML.includes("doh").should.equal(true);
-		d1.click();
-		div.innerHTML.includes("foo").should.equal(false);
-		div.innerHTML.includes("bar").should.equal(true);
-		div.innerHTML.includes("doh").should.equal(true);
+	test("can remove CSS properties", async ({html, find, evaluate}) => {
+		await html("<div style='color: red; font-weight: bold;' _='on click remove {color} from me'></div>");
+		await find('div').dispatchEvent('click');
+		var style = await evaluate(() => document.querySelector('#work-area div').style.color);
+		expect(style).toBe('');
+		// font-weight should remain
+		var fw = await evaluate(() => document.querySelector('#work-area div').style.fontWeight);
+		expect(fw).toBe('bold');
+	});
+
+	test("can remove multiple CSS properties", async ({html, find, evaluate}) => {
+		await html("<div style='color: red; font-weight: bold; opacity: 0.5;' _='on click remove {color; font-weight} from me'></div>");
+		await find('div').dispatchEvent('click');
+		var color = await evaluate(() => document.querySelector('#work-area div').style.color);
+		var fw = await evaluate(() => document.querySelector('#work-area div').style.fontWeight);
+		var op = await evaluate(() => document.querySelector('#work-area div').style.opacity);
+		expect(color).toBe('');
+		expect(fw).toBe('');
+		expect(op).toBe('0.5');
+	});
+
+	test("can remove query refs from specific things", async ({html, find, evaluate}) => {
+		await html("<div><div id='d1' _='on click remove <p/> from me'><p>foo</p>bar</div><p>doh</p></div>");
+		await find('#d1').dispatchEvent('click');
+		const outerHTML = await evaluate(() => document.querySelector('#work-area > div').innerHTML);
+		expect(outerHTML).not.toContain("foo");
+		expect(outerHTML).toContain("bar");
+		expect(outerHTML).toContain("doh");
+	});
+
+	test("can remove a value from an array", async ({html, find}) => {
+		await html(`<div _="on click
+		                      set :arr to [1,2,3,4]
+		                      remove 3 from :arr
+		                      put :arr as String into me"></div>`);
+		await find('div').dispatchEvent('click');
+		await expect(find('div')).toHaveText("1,2,4");
+	});
+
+	test("can remove a value from a set", async ({html, find}) => {
+		await html(`<div _="on click
+		                      set :s to ['a','b','c'] as Set
+		                      remove 'b' from :s
+		                      put :s.size into me"></div>`);
+		await find('div').dispatchEvent('click');
+		await expect(find('div')).toHaveText("2");
+	});
+
+	test("can splice an array element by index", async ({html, find}) => {
+		await html(`<div _="on click
+		                      set :arr to [1,2,3,4]
+		                      remove :arr[1]
+		                      put :arr as String into me"></div>`);
+		await find('div').dispatchEvent('click');
+		await expect(find('div')).toHaveText("1,3,4");
+	});
+
+	test("can splice an array with a negative index", async ({html, find}) => {
+		await html(`<div _="on click
+		                      set :arr to [1,2,3,4]
+		                      remove :arr[-1]
+		                      put :arr as String into me"></div>`);
+		await find('div').dispatchEvent('click');
+		await expect(find('div')).toHaveText("1,2,3");
+	});
+
+	test("can delete a property via dot notation", async ({html, find}) => {
+		await html(`<div _="on click
+		                      set :obj to { a: 1, b: 2, c: 3 }
+		                      remove :obj.b
+		                      put :obj.a + ',' + (:obj.b is undefined) + ',' + :obj.c into me"></div>`);
+		await find('div').dispatchEvent('click');
+		await expect(find('div')).toHaveText("1,true,3");
+	});
+
+	test("can delete a property via 'of' form", async ({html, find}) => {
+		await html(`<div _="on click
+		                      set :obj to { a: 1, b: 2, c: 3 }
+		                      remove b of :obj
+		                      put :obj.a + ',' + (:obj.b is undefined) + ',' + :obj.c into me"></div>`);
+		await find('div').dispatchEvent('click');
+		await expect(find('div')).toHaveText("1,true,3");
+	});
+
+	test("remove on a property whose value is a DOM node still detaches the node", async ({html, find}) => {
+		await html(`
+			<div id="parent">
+				<span id="child">kept</span>
+			</div>
+			<button _="on click
+			             set :wrapper to { el: #child }
+			             remove :wrapper.el">go</button>
+		`);
+		await expect(find('#child')).toHaveCount(1);
+		await find('button').dispatchEvent('click');
+		await expect(find('#child')).toHaveCount(0);
 	});
 });

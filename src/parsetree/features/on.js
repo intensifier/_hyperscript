@@ -1,0 +1,468 @@
+/**
+ * On Feature - Event handlers
+ *
+ * Parses: on [every] <eventName>[(args...)] [filter] [from <target>] [elsewhere] [in <selector>]
+ *         [debounced|throttled at <time>] [queue all|first|last|none] <commands>
+ *         [catch <error> <commands>] [finally <commands>] end
+ * Executes: Attaches event handlers with support for:
+ *   - Multiple event sources (or)
+ *   - Event filtering and delegation
+ *   - Debouncing and throttling
+ *   - Event queueing strategies
+ *   - Intersection and mutation observers
+ *   - Event count filtering
+ */
+
+import { Feature, ParseElement } from '../base.js';
+
+export class OnFeature extends Feature {
+    static keyword = "on";
+
+    constructor(displayName, events, start, every, errorHandler, errorSymbol, finallyHandler, queueAll, queueFirst, queueNone, queueLast) {
+        super();
+        this.displayName = displayName;
+        this.events = events;
+        this.start = start;
+        this.every = every;
+        this.errorHandler = errorHandler;
+        this.errorSymbol = errorSymbol;
+        this.finallyHandler = finallyHandler;
+        this.queueAll = queueAll;
+        this.queueFirst = queueFirst;
+        this.queueNone = queueNone;
+        this.queueLast = queueLast;
+    }
+
+    execute(/** @type {Context} */ ctx) {
+        const onFeature = this;
+        const every = this.every;
+        const queueNone = this.queueNone;
+        const queueFirst = this.queueFirst;
+        const queueLast = this.queueLast;
+        const start = this.start;
+
+        let eventQueueInfo = ctx.meta.runtime.getEventQueueFor(ctx.me, onFeature);
+        if (eventQueueInfo.executing && every === false) {
+            if (queueNone || (queueFirst && eventQueueInfo.queue.length > 0)) {
+                return;
+            }
+            if (queueLast) {
+                eventQueueInfo.queue.length = 0;
+            }
+            eventQueueInfo.queue.push(ctx);
+            return;
+        }
+        eventQueueInfo.executing = true;
+        ctx.meta.onHalt = function () {
+            eventQueueInfo.executing = false;
+            var queued = eventQueueInfo.queue.shift();
+            if (queued) {
+                setTimeout(function () {
+                    onFeature.execute(queued);
+                }, 1);
+            }
+        };
+        ctx.meta.reject = function (err) {
+            console.error(err.message ? err.message : err);
+            console.error(err.stack)
+            var hypertrace = ctx.meta.runtime.getHyperTrace(ctx, err);
+            if (hypertrace) {
+                hypertrace.print();
+            }
+            ctx.meta.runtime.triggerEvent(ctx.me, "exception", {
+                error: err,
+            });
+        };
+        start.execute(ctx);
+    }
+
+    install(elt, source, args, runtime) {
+        const onFeature = this;
+        const displayName = this.displayName;
+        const errorHandler = this.errorHandler;
+        const errorSymbol = this.errorSymbol;
+        const finallyHandler = this.finallyHandler;
+
+        for (const eventSpec of onFeature.events) {
+            var targets;
+            if (eventSpec.elsewhere) {
+                targets = [document];
+            } else if (eventSpec.from) {
+                targets = eventSpec.from.evaluate(runtime.makeContext(elt, onFeature, elt, null));
+            } else {
+                targets = [elt];
+            }
+            // Per-element event state (moved off parsed eventSpec)
+            var internalData = runtime.getInternalData(elt);
+            if (!internalData.eventState) internalData.eventState = new Map();
+            if (!internalData.eventState.has(eventSpec)) {
+                internalData.eventState.set(eventSpec, { execCount: 0, debounced: undefined, lastExec: undefined });
+            }
+            var eventState = internalData.eventState.get(eventSpec);
+
+            runtime.implicitLoop(targets, function (target) {
+                // OK NO PROMISE
+
+                var eventName = eventSpec.on;
+                if (target == null) {
+                  console.warn("'%s' feature ignored because target does not exists:", displayName, elt);
+                  return;
+                }
+
+                var eltData = runtime.getInternalData(elt);
+                if (!eltData.listeners) eltData.listeners = [];
+                if (!eltData.observers) eltData.observers = [];
+
+                if (eventSpec.mutationSpec) {
+                    eventName = "hyperscript:mutation";
+                    const observer = new MutationObserver(function (mutationList, observer) {
+                        if (!onFeature.executing) {
+                            runtime.triggerEvent(target, eventName, {
+                                mutationList: mutationList,
+                                observer: observer,
+                            });
+                        }
+                    });
+                    observer.observe(target, eventSpec.mutationSpec);
+                    eltData.observers.push(observer);
+                }
+
+                if (eventSpec.intersectionSpec) {
+                    eventName = "hyperscript:intersection";
+                    const observer = new IntersectionObserver(function (entries) {
+                        for (const entry of entries) {
+                            var detail = {
+                                observer: observer,
+                            };
+                            detail = Object.assign(detail, entry);
+                            detail["intersecting"] = entry.isIntersecting;
+                            runtime.triggerEvent(target, eventName, detail);
+                        }
+                    }, eventSpec.intersectionSpec);
+                    observer.observe(target);
+                    eltData.observers.push(observer);
+                }
+
+                if (eventSpec.resizeSpec && target instanceof Element) {
+                    // ResizeObserver only works on Elements, so `on resize from window`
+                    // (or document) falls through to the native `resize` event below.
+                    eventName = "hyperscript:resize";
+                    const observer = new ResizeObserver(function (entries) {
+                        for (const entry of entries) {
+                            var detail = {
+                                width: entry.contentRect.width,
+                                height: entry.contentRect.height,
+                                contentRect: entry.contentRect,
+                                entry: entry,
+                            };
+                            runtime.triggerEvent(target, eventName, detail);
+                        }
+                    });
+                    observer.observe(target);
+                    eltData.observers.push(observer);
+                }
+
+                var addEventListener = target.addEventListener || target.on;
+                var handler;
+                addEventListener.call(target, eventName, handler = function listener(evt) {
+                    // OK NO PROMISE
+                    if (typeof Node !== 'undefined' && elt instanceof Node && target !== elt && !elt.isConnected) {
+                        target.removeEventListener(eventName, listener);
+                        return;
+                    }
+
+                    var ctx = runtime.makeContext(elt, onFeature, elt, evt);
+                    if (eventSpec.elsewhere && elt.contains(evt.target)) {
+                        return;
+                    }
+                    if (eventSpec.from) {
+                        ctx.result = target;
+                    }
+
+                    // establish context
+                    for (const arg of eventSpec.args) {
+                        let eventValue = ctx.event[arg.value];
+                        if (eventValue !== undefined) {
+                            ctx.locals[arg.value] = eventValue;
+                        } else if (ctx.event.detail != null) {
+                            ctx.locals[arg.value] = ctx.event.detail[arg.value];
+                        }
+                    }
+
+                    // install error handler if any
+                    ctx.meta.errorHandler = errorHandler;
+                    ctx.meta.errorSymbol = errorSymbol;
+                    ctx.meta.finallyHandler = finallyHandler;
+
+                    // apply filter
+                    if (eventSpec.filter) {
+                        var initialCtx = ctx.meta.context;
+                        ctx.meta.context = ctx.event;
+                        try {
+                            var value = eventSpec.filter.evaluate(ctx); //OK NO PROMISE
+                            if (!value) return;
+                        } finally {
+                            ctx.meta.context = initialCtx;
+                        }
+                    }
+
+                    if (eventSpec.inExpr) {
+                        var inElement = evt.target;
+                        while (true) {
+                            if (inElement.matches && inElement.matches(eventSpec.inExpr.css)) {
+                                ctx.result = inElement;
+                                break;
+                            } else {
+                                inElement = inElement.parentElement;
+                                if (inElement == null) {
+                                    return; // no match found
+                                }
+                            }
+                        }
+                    }
+
+                    // verify counts
+                    eventState.execCount++;
+                    if (eventSpec.startCount) {
+                        if (eventSpec.endCount) {
+                            if (
+                                eventState.execCount < eventSpec.startCount ||
+                                eventState.execCount > eventSpec.endCount
+                            ) {
+                                return;
+                            }
+                        } else if (eventSpec.unbounded) {
+                            if (eventState.execCount < eventSpec.startCount) {
+                                return;
+                            }
+                        } else if (eventState.execCount !== eventSpec.startCount) {
+                            return;
+                        }
+                    }
+
+                    //debounce
+                    if (eventSpec.debounceTime) {
+                        if (eventState.debounced) {
+                            clearTimeout(eventState.debounced);
+                        }
+                        eventState.debounced = setTimeout(function () {
+                            onFeature.execute(ctx);
+                        }, eventSpec.debounceTime);
+                        return;
+                    }
+
+                    // throttle
+                    if (eventSpec.throttleTime) {
+                        if (
+                            eventState.lastExec &&
+                            Date.now() < (eventState.lastExec + eventSpec.throttleTime)
+                        ) {
+                            return;
+                        } else {
+                            eventState.lastExec = Date.now();
+                        }
+                    }
+
+                    // apply execute
+                    onFeature.execute(ctx);
+                });
+                eltData.listeners.push({ target: target, event: eventName, handler: handler });
+            });
+        }
+    }
+
+    static parse(parser) {
+        if (!parser.matchToken("on")) return;
+        var every = false;
+        var first = false;
+        if (parser.matchToken("every")) {
+            every = true;
+        } else if (parser.matchToken("first")) {
+            first = true;
+        }
+        var events = [];
+        var displayName = null;
+        do {
+            var on = parser.requireElement("eventName", "Expected event name");
+
+            var eventName = on.evalStatically();
+
+            if (displayName) {
+                displayName = displayName + " or " + eventName;
+            } else {
+                displayName = "on " + eventName;
+            }
+            var args = ParseElement.parseEventArgs(parser);
+
+            var filter = null;
+            if (parser.matchOpToken("[")) {
+                filter = parser.requireElement("expression");
+                parser.requireOpToken("]");
+            }
+
+            var startCount, endCount ,unbounded;
+            if (first) {
+                startCount = 1;
+            } else if (parser.currentToken().type === "NUMBER") {
+                var startCountToken = parser.consumeToken();
+                if (!startCountToken.value) return;
+                startCount = parseInt(startCountToken.value);
+                if (parser.matchToken("to")) {
+                    var endCountToken = parser.consumeToken();
+                    if (!endCountToken.value) return;
+                    endCount = parseInt(endCountToken.value);
+                } else if (parser.matchToken("and")) {
+                    unbounded = true;
+                    parser.requireToken("on");
+                }
+            }
+
+            var intersectionSpec, mutationSpec, resizeSpec;
+            if (eventName === "resize") {
+                resizeSpec = true;
+            } else if (eventName === "intersection") {
+                intersectionSpec = {};
+                if (parser.matchToken("with")) {
+                    intersectionSpec["with"] = parser.requireElement("expression").evalStatically();
+                }
+                if (parser.matchToken("having")) {
+                    do {
+                        if (parser.matchToken("margin")) {
+                            intersectionSpec["rootMargin"] = parser.requireElement("stringLike").evalStatically();
+                        } else if (parser.matchToken("threshold")) {
+                            intersectionSpec["threshold"] = parser.requireElement("expression").evalStatically();
+                        } else {
+                            parser.raiseError("Unknown intersection config specification");
+                        }
+                    } while (parser.matchToken("and"));
+                }
+            } else if (eventName === "mutation") {
+                mutationSpec = {};
+                if (parser.matchToken("of")) {
+                    do {
+                        if (parser.matchToken("anything")) {
+                            mutationSpec["attributes"] = true;
+                            mutationSpec["subtree"] = true;
+                            mutationSpec["characterData"] = true;
+                            mutationSpec["childList"] = true;
+                        } else if (parser.matchToken("childList")) {
+                            mutationSpec["childList"] = true;
+                        } else if (parser.matchToken("attributes")) {
+                            mutationSpec["attributes"] = true;
+                        } else if (parser.matchToken("subtree")) {
+                            mutationSpec["subtree"] = true;
+                        } else if (parser.matchToken("characterData")) {
+                            mutationSpec["characterData"] = true;
+                        } else if (parser.currentToken().type === "ATTRIBUTE_REF") {
+                            var attribute = parser.consumeToken();
+                            if (mutationSpec["attributeFilter"] == null) {
+                                mutationSpec["attributeFilter"] = [];
+                            }
+                            if (attribute.value.startsWith("@")) {
+                                mutationSpec["attributeFilter"].push(attribute.value.substring(1));
+                            } else {
+                                parser.raiseError(
+                                    "Only shorthand attribute references are allowed here"
+                                );
+                            }
+                        } else {
+                            parser.raiseError("Unknown mutation config specification");
+                        }
+                    } while (parser.matchToken("or"));
+                    // Enable oldValue recording for requested types
+                    if (mutationSpec["attributes"] || mutationSpec["attributeFilter"]) {
+                        mutationSpec["attributeOldValue"] = true;
+                    }
+                    if (mutationSpec["characterData"]) {
+                        mutationSpec["characterDataOldValue"] = true;
+                    }
+                } else {
+                    mutationSpec["attributes"] = true;
+                    mutationSpec["characterData"] = true;
+                    mutationSpec["childList"] = true;
+                    mutationSpec["attributeOldValue"] = true;
+                    mutationSpec["characterDataOldValue"] = true;
+                }
+            }
+
+            var from = null;
+            var elsewhere = false;
+            if (parser.matchToken("from")) {
+                if (parser.matchToken("elsewhere")) {
+                    elsewhere = true;
+                } else {
+                    parser.pushFollow("or");
+                    try {
+                        from = parser.requireElement("expression")
+                    } finally {
+                        parser.popFollow();
+                    }
+                    if (!from) {
+                        parser.raiseError('Expected either target value or "elsewhere".');
+                    }
+                }
+            }
+            // support both "elsewhere" and "from elsewhere"
+            if (from === null && elsewhere === false && parser.matchToken("elsewhere")) {
+                elsewhere = true;
+            }
+
+            if (parser.matchToken("in")) {
+                var inExpr = parser.parseElement('unaryExpression');
+            }
+
+            if (parser.matchToken("debounced")) {
+                parser.requireToken("at");
+                var timeExpr = parser.requireElement("unaryExpression");
+                var debounceTime = timeExpr.evalStatically();
+            } else if (parser.matchToken("throttled")) {
+                parser.requireToken("at");
+                var timeExpr = parser.requireElement("unaryExpression");
+                var throttleTime = timeExpr.evalStatically();
+            }
+
+            events.push({
+                every: every,
+                on: eventName,
+                args: args,
+                filter: filter,
+                from: from,
+                inExpr: inExpr,
+                elsewhere: elsewhere,
+                startCount: startCount,
+                endCount: endCount,
+                unbounded: unbounded,
+                debounceTime: debounceTime,
+                throttleTime: throttleTime,
+                mutationSpec: mutationSpec,
+                intersectionSpec: intersectionSpec,
+                resizeSpec: resizeSpec,
+            });
+        } while (parser.matchToken("or"));
+
+        var queueLast = true;
+        if (!every) {
+            if (parser.matchToken("queue")) {
+                if (parser.matchToken("all")) {
+                    var queueAll = true;
+                    var queueLast = false;
+                } else if (parser.matchToken("first")) {
+                    var queueFirst = true;
+                } else if (parser.matchToken("none")) {
+                    var queueNone = true;
+                } else {
+                    parser.requireToken("last");
+                }
+            }
+        }
+
+        var start = parser.requireElement("commandList");
+        parser.ensureTerminated(start);
+
+        var { errorHandler, errorSymbol, finallyHandler } = Feature.parseErrorAndFinally(parser);
+
+        var onFeature = new OnFeature(displayName, events, start, every, errorHandler, errorSymbol, finallyHandler, queueAll, queueFirst, queueNone, queueLast);
+        parser.setParent(start, onFeature);
+        return onFeature;
+    }
+}

@@ -2,35 +2,38 @@
 title: on - ///_hyperscript
 ---
 
-## The `event handler` Feature
+## The `on` Feature
 
-Event handlers are used to handle events with hyperscript. They are typically embedded directly on the element that
-is responding to the event.
+The `on` feature is the primary way you hook hyperscript into the DOM event system. You place it directly on elements using the `_`, `script`, or `data-script` attribute, and it lets you respond to any DOM event -- clicks, keypresses, custom events, and more -- with a body of hyperscript commands.
 
-### Syntax
-
-```ebnf
-on [every] <event-name>[(<param-list>)][\[<filter>\]] [<count>] [from <expr>] [<debounce> | <throttle>]
-   { or [every] <event-name>[(<param-list>)][\[<filter>\]] [<count>] [from <expr>] [<debounce> | <throttle>] }
-    [queue (all | first | last | none)]
-    {<command>}
-[end]
-```
-
-If the `every` prefix is used, the event handler will not be synchronized (see [queueing](#queueing) below.)
-
-The `event-name` can be a symbol, a dot-separated symbol or a string that names the event. The most obvious events
-of interest are are [standard HTML DOM events](https://www.w3schools.com/jsref/dom_obj_event.asp) such as click,
+The `event-name` can be a symbol, a dot-separated symbol, or a string that names the event. The most obvious events
+of interest are [standard HTML DOM events](https://www.w3schools.com/jsref/dom_obj_event.asp) such as click,
 focus/blur, change, etc. There are [many, many standard browser events](https://developer.mozilla.org/en-US/docs/Web/Events) that
 may be of interest depending on what you are trying to build. You may also wish to define your own events for higher level abstractions.
 
+If the `every` prefix is used, the event handler will not be synchronized (see [queueing](#event-queuing) below.)
+
+If the `first` prefix is used, the event handler will only fire once (equivalent to a count of `1`).
+
 The optional `param-list` is a comma separated list of parameter names. Parameters will be set from properties directly
-on the event or in the `details` property.
+on the event or in the `details` property. The `event` symbol is always available in an `on` feature and is set to the triggering event.
+
+So if an event has the value `event.detail.foo = "bar"` then the `on` declaration could look like this:
+
+```html
+<div _="on anEvent(foo) log foo">Log Foo</div>
+```
+
+The above could also be written in the following more long-winded manner:
+
+```html
+<div _="on anEvent log event.detail.foo">Log Foo</div>
+```
 
 The optional `filter` is a boolean expression that will filter the event. Symbols in the expression will be resolved
 against the event first, then against the global scope.
 
-The optional `count` is a count filter with a value of either a specific number, a range or an unbounded start:
+The optional `count` is a count filter with a value of either a specific number, a range, or an unbounded start:
 
 ```
   on click 1
@@ -38,11 +41,17 @@ The optional `count` is a count filter with a value of either a specific number,
   on click 11 and on
 ```
 
-You can then optionally listen to an event from another element using the `from <expr>` syntax, including the special
-value `elsewhere`, which will listen for the event from elsewhere in the DOM.  (This is useful if you want "click-away to
-close" behavior.)
+You can listen to an event from another element using the `from <expr>` syntax, including the special
+value `elsewhere`, which will listen for the event from elsewhere in the DOM. This is useful if you want "click-away to
+close" behavior.
 
-Finally an event can specify a `debounced at` or `throttled at` value to debounce or throttle the events.
+You can also scope the listener to a subtree with `in <expr>`, which restricts the handler to events whose target matches the given expression:
+
+```html
+<div _="on click in .menu-item log 'menu item clicked'">...</div>
+```
+
+An event can specify a `debounced at` or `throttled at` value to debounce or throttle the events:
 
 ```text
   -- will wait until 500ms have passed without a keyup to trigger
@@ -59,32 +68,11 @@ Events can be repeated separated by an `or` to assign one handler to multiple ev
 </div>
 ```
 
-The `queue` keyword allows you to specify an event queue strategy across all events for the handler (see [queueing](#queueing) below.)
+The `queue` keyword allows you to specify an event queue strategy across all events for the handler (see [queueing](#event-queuing) below.)
 
-The body is a list of [commands](/docs#commands), optionally separated by the `then` keyword
+The body is a list of [commands](/docs#commands), optionally separated by the `then` keyword.
 
-The `end` is optional if you are chaining `on` features together
-
-### Description
-
-The `on` feature is the primary way to hook hyperscript into the DOM event system. It is typically placed on
-DOM elements directly, using the `_`, `script` or `data-script` attribute.
-
-The `on` handler can specify parameters. The value of these parameters destructured from properties on the `event` or`event.detail`
-object of the triggering event and matched by name.
-
-So if an event has the value `event.detail.foo = "bar"` then the `on` declaration could look like this:
-
-```html
-<div _="on anEvent(foo) log foo">Log Foo</div>
-```
-
-The `event` symbol is always available in an `on` feature and is set to the triggering event. So the above could
-be written in the following more long-winded manner:
-
-```html
-<div _="on anEvent log event.detail.foo">Log Foo</div>
-```
+The `end` is optional if you are chaining `on` features together.
 
 When the element is removed, the listener is removed too -- even if it's
 listening to another element that's still in the document:
@@ -118,7 +106,7 @@ If you postfix the event with `queue` you may pick from one of four strategies:
 - `first` - The first event that arrives will be queued, all others will be dropped
 - `last` - The last event that arrives will be queued, all others will be dropped
 
-`queue last` is the default behavior
+`queue last` is the default behavior.
 
 ### Exceptions
 
@@ -134,11 +122,11 @@ be handled as a normal event:
 </div>
 ```
 
-#### Mutation Events
+### Mutation Events
 
-Hyperscript includes a few synthetic events that make use of more complex APIs. For example, you can listen for
-mutations on an element with the `on mutation` form. This will use the [Mutation Observer](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver)
-API, but will act more like a regular event handler.
+Hyperscript includes a few synthetic events that make use of more complex APIs. You can listen for
+mutations on an element with the `on mutation` form. This uses the [Mutation Observer](https://developer.mozilla.org/en-US/docs/Web/API/MutationObserver)
+API, but acts more like a regular event handler.
 
 ```html
 <div _='on mutation of @foo put "Mutated" into me'></div>
@@ -147,7 +135,7 @@ API, but will act more like a regular event handler.
 This div will listen for mutations of the `foo` attribute on this div and, when one occurs, will put the value
 "Mutated" into the element.
 
-#### Intersection Events
+### Intersection Events
 
 Another synthetic event is the `intersection` event that uses the [Intersection Observer](https://developer.mozilla.org/en-US/docs/Web/API/Intersection_Observer_API)
 API. Again, hyperscript makes this API feel more event-driven:
@@ -155,8 +143,8 @@ API. Again, hyperscript makes this API feel more event-driven:
 ```html
 <img
   _="on intersection(intersecting) having threshold 0.5
-         if intersecting transition opacity to 1
-         else transition opacity to 0 "
+         if intersecting transition *opacity to 1
+         else transition *opacity to 0 "
   src="https://placebear.com/200/300"
 />
 ```
@@ -168,9 +156,19 @@ must be showing.
 Here is a demo:
 
 <img _="on intersection(intersecting) having threshold 0.5
-         if intersecting transition opacity to 1
-         else transition opacity to 0 "
+         if intersecting transition *opacity to 1
+         else transition *opacity to 0 "
      src="https://placebear.com/200/300"/>
+
+### Resize Events
+
+The `resize` synthetic event uses the [Resize Observer](https://developer.mozilla.org/en-US/docs/Web/API/ResizeObserver)
+API to fire whenever an element's size changes. The event detail exposes `width`, `height`,
+`contentRect`, and the raw observer `entry`:
+
+```html
+<div _="on resize(width, height) put `${width} × ${height}` into me"></div>
+```
 
 ### Examples
 
@@ -184,4 +182,31 @@ Here is a demo:
   Mouse Over Me!
 </div>
 <div id="help">I'm a helpful message!</div>
+```
+
+### Syntax
+
+```ebnf
+on [every | first] <event-spec>
+   (or [every | first] <event-spec>)*
+   [queue (all | first | last | none)]
+   <command>+
+[end]
+
+<event-spec> ::= <event-name> [(<param-list>)] [[\<filter>]] [<count>]
+                 [<synthetic-modifier>]
+                 [(from <expression> | from elsewhere | elsewhere)]
+                 [in <expression>]
+                 [<debounce> | <throttle>]
+
+<synthetic-modifier> ::=
+    | mutation [of (anything | childList | attributes | subtree | characterData | @<attr>)
+                   (or ...)*]
+    | intersection [with <expression>]
+                   [having (margin <string> | threshold <expression>) (and ...)*]
+    | resize
+
+<count> ::= <number> | <number> to <number> | <number> and on
+<debounce> ::= debounced at <time-expression>
+<throttle> ::= throttled at <time-expression>
 ```

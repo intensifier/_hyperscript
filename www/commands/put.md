@@ -4,18 +4,9 @@ title: put - ///_hyperscript
 
 ## The `put` Command
 
-### Syntax
+The `put` command inserts content into a variable, property, or the DOM. It reads naturally for placement operations like "put X into Y" or "put X after Y".
 
-```ebnf
-put <expression> (into | before | at [the] start of | at [the] end of | after)  <expression>`
-```
-
-### Description
-
-The `put` command allows you to insert content into a variable, property or the DOM.
-
-Content that is added to the DOM via the `put` command targeting DOM will have any hyperscript content within it
-initialized without needing to call `processNode()`.
+Content added to the DOM via `put` will have any hyperscript within it automatically initialized -- no need to call `_hyperscript.process()`.
 
 ### Examples
 
@@ -44,4 +35,19 @@ def fillList(array, ul)
 		put it at end of the ul
 	end
 end
+```
+
+### Arrays
+
+`put` works with arrays for positional insertion:
+
+```hyperscript
+put item at start of myArray             -- unshift
+put item at end of myArray               -- push
+```
+
+### Syntax
+
+```ebnf
+put <expression> (into | before | at [the] start of | at [the] end of | after) <expression>
 ```

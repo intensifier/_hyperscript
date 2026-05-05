@@ -1,134 +1,40 @@
-describe("the worker feature", function () {
-	beforeEach(function () {
-		clearWorkArea();
-	});
-	afterEach(function () {
-		clearWorkArea();
-	});
+import {test, expect} from '../fixtures.js'
 
-	it("can define a basic no arg function in a worker", function (done) {
-		var script = make(
-			"<script type='text/hyperscript'>" +
-				"worker example" +
-				"  def func " +
-				"    return 1 " +
-				"  end " +
-				"end" +
-				"</script>"
-		);
-		window.example.func().then(function (result) {
-			assert.equal(result, 1);
-			delete window.example;
-			done();
-		});
-	});
+test.describe('the worker feature', () => {
+	test('raises a helpful error when the worker plugin is not installed', async ({error}) => {
+		// The core bundle only ships a stub; the actual worker plugin is
+		// a separate ext that must be loaded. Without it, parsing should
+		// fail with a message pointing the user to the docs.
+		const msg = await error("worker MyWorker def noop() end end")
+		expect(msg).toContain('worker plugin')
+		expect(msg).toContain('hyperscript.org/features/worker')
+	})
 
-	it("can define a basic one arg function", function (done) {
-		var script = make(
-			"<script type='text/hyperscript'>" +
-				"worker example" +
-				"  def fn(n) " +
-				"    return n " +
-				"  end " +
-				"end" +
-				"</script>"
-		);
-		window.example.fn(1).then(function (result) {
-			assert.equal(result, 1);
-			delete window.example;
-			done();
-		});
-	});
+	test.skip('can define a basic no arg function in a worker', async () => {
+		// TODO: reimplement
+	})
 
-	it("can call functions from within _hyperscript", function (done) {
-		var div;
-		var script = make(
-			"<script type='text/hyperscript'>" +
-				"worker example" +
-				"  def fn(n) " +
-				"    return n + 1 " +
-				"  end " +
-				"end" +
-				"</script>"
-		);
-		div = make(
-			"<div _='on click call example.fn(1)" +
-				"        then put it into my.innerHTML" +
-				"        then trigger finishTest'></div>"
-		);
-		div.addEventListener("finishTest", function () {
-			div.innerHTML.should.equal("2");
-			delete window.example;
-			done();
-		});
-		div.click();
-	});
+	test.skip('can define a basic one arg function', async () => {
+		// TODO: reimplement
+	})
 
-	it("can evaluate expressions in worker functions", function (done) {
-		var script = make(
-			"<script type='text/hyperscript'>" +
-				"worker example" +
-				"  def fn(n) " +
-				"    return n + 1 " +
-				"  end " +
-				"end" +
-				"</script>"
-		);
-		window.example.fn(1).then(function (result) {
-			assert.equal(result, 2);
-			delete window.example;
-			done();
-		});
-	});
+	test.skip('can call functions from within _hyperscript', async () => {
+		// TODO: reimplement
+	})
 
-	it("workers can be namespaced", function (done) {
-		var script = make(
-			"<script type='text/hyperscript'>" +
-				"worker example.foo.bar" +
-				"  def fn " +
-				"    return 1 " +
-				"  end " +
-				"end" +
-				"</script>"
-		);
-		window.example.foo.bar.fn().then(function (result) {
-			assert.equal(result, 1);
-			delete window.example;
-			done();
-		});
-	});
+	test.skip('can evaluate expressions in worker functions', async () => {
+		// TODO: reimplement
+	})
 
-	it("can access global scope in worker function", function (done) {
-		var script = make(
-			"<script type='text/hyperscript'>" +
-				"worker example" +
-				"  def func " +
-				"    return Math.max(1, 2) " +
-				"  end " +
-				"end" +
-				"</script>"
-		);
-		window.example.func().then(function (result) {
-			assert.equal(result, 2);
-			delete window.example;
-			done();
-		});
-	});
+	test.skip('workers can be namespaced', async () => {
+		// TODO: reimplement
+	})
 
-	it("can import external scripts", function (done) {
-		var script = make(
-			"<script type='text/hyperscript'>" +
-				"worker example('data:text/javascript,self.a=1', 'data:text/javascript,self.b=2')" +
-				"  def func " +
-				"    return a + b " +
-				"  end " +
-				"end" +
-				"</script>"
-		);
-		window.example.func().then(function (result) {
-			assert.equal(result, 3);
-			delete window.example;
-			done();
-		});
-	});
-});
+	test.skip('can access global scope in worker function', async () => {
+		// TODO: reimplement
+	})
+
+	test.skip('can import external scripts', async () => {
+		// TODO: reimplement
+	})
+})

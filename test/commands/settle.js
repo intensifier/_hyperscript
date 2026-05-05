@@ -1,29 +1,29 @@
-describe("the settle command", function () {
-	beforeEach(function () {
-		clearWorkArea();
-	});
-	afterEach(function () {
-		clearWorkArea();
+import {test, expect} from '../fixtures.js'
+
+test.describe("the settle command", () => {
+
+	test("can settle me no transition", async ({html, find}) => {
+		test.setTimeout(5000);
+		await html("<div id='d1' _='on click settle then add .foo'></div>");
+		await find('#d1').dispatchEvent('click');
+		await expect(find('#d1')).toHaveClass(/foo/);
 	});
 
-	it("can settle me no transition", function (done) {
-		var d1 = make("<div id='d1' _='on click settle then add .foo'></div>");
-		d1.click();
-		d1.classList.contains("foo").should.equal(false);
-		setTimeout(function () {
-			d1.classList.contains("foo").should.equal(true);
-			done();
-		}, 1000);
+	test("can settle target no transition", async ({html, find}) => {
+		test.setTimeout(5000);
+		await html("<div id='d1'></div><div _='on click settle #d1 then add .foo to #d1'></div>");
+		await find('div:nth-of-type(2)').dispatchEvent('click');
+		await expect(find('#d1')).toHaveClass(/foo/);
 	});
 
-	it("can settle target no transition", function (done) {
-		var d1 = make("<div id='d1'></div>");
-		var d2 = make("<div _='on click settle #d1 then add .foo to #d1'></div>");
-		d2.click();
-		d1.classList.contains("foo").should.equal(false);
-		setTimeout(function () {
-			d1.classList.contains("foo").should.equal(true);
-			done();
-		}, 1000);
+	test("can settle a collection of elements", async ({html, find}) => {
+		test.setTimeout(5000);
+		await html(
+			"<div class='item'></div><div class='item'></div>" +
+			"<div id='trigger' _='on click settle <.item/> then add .done to <.item/>'></div>"
+		);
+		await find('#trigger').dispatchEvent('click');
+		await expect(find('.item').first()).toHaveClass(/done/);
+		await expect(find('.item').nth(1)).toHaveClass(/done/);
 	});
 });

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Template Test</title>
+    <script src="/_hyperscript/dist/_hyperscript.js"></script>
+</head>
+<body>
+    <h2>Live Template: Counter</h2>
+    <template live _="init set ^count to 0">
+        <button _="on click increment ^count">+</button>
+        <button _="on click decrement ^count">-</button>
+        <p>Count: ${^count}</p>
+    </template>
+
+    <hr>
+
+    <h2>Live Template: List</h2>
+    <template live _="init set ^items to ['Apple', 'Banana', 'Cherry']">
+        <input type="text" id="new-item" placeholder="Add item..." />
+        <button _="on click
+                     get #new-item's value
+                     if it is not empty
+                       add it to ^items
+                       set #new-item's value to ''">Add</button>
+        <ul>
+            #for item in ^items
+                <li>${item}</li>
+            #else
+                <li>No items</li>
+            #end
+        </ul>
+    </template>
+
+    <hr>
+
+    <h2>Live Template: Global State</h2>
+    <div>
+        <input type="text" value="World" _="bind me to $name" />
+    </div>
+    <template live>
+        <p>Hello, ${$name}!</p>
+    </template>
+</body>
+</html>

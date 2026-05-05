@@ -4,41 +4,50 @@ title: go - ///_hyperscript
 
 ## The `go` Command
 
-### Syntax
+The `go` command navigates to a URL or goes back in browser history.
 
-```ebnf
- go [to] url <stringLike> [in new window]
- go [to] [top|middle|bottom] [left|center|right] [of] <expression> [(+|-) <number> [px] ][smoothly|instantly]
- go back
+`go to` accepts a URL (string, template literal, or naked URL starting with `/` or `http`/`https`) and navigates to it.
+If the value starts with `#`, it sets `window.location.hash`. If it resolves to an Element, it scrolls to it (for backwards compatibility - prefer [`scroll to`](/commands/scroll) for scrolling).
+
+`go to ... in new window` opens the URL in a new window/tab.
+
+`go back` navigates back in the browser history.
+
+Naked URLs are detected automatically - no `url` keyword is needed:
+
+```hyperscript
+go to /about
+go to https://example.com
+go to `/${dynamicPath}`
+go to "#section"
 ```
 
-### Description
-
-The `go` command allows you navigate on the page with various forms
-
-`go to url <stringLike>` will navigate to the given URL. If the url starts with an anchor `#` it will instead update
-the windows href.
-
-`go to <modifiers> elt` will scroll the element into view on the current page. You can pick the top, bottom, left, etc.
-by using modifiers, and you can pick the animation style with a following `smoothly` or `instantly`.
-
-Additionally you can use a pixel-based offset to pad the scrolling by some amount since, annoyingly, the default behavior of
-`scrollIntoView()` is to put the element right on the edge of the viewport.
-
-Finally, the `go back` form will navigate back in the history stack.
+Note: the `go to url ...` form and scroll modifiers (`go to the top of ...`) are deprecated.
+Use naked URLs or string expressions for navigation, and the [`scroll`](/commands/scroll) command for scrolling.
 
 ### Examples
 
 ```html
-<button _="on click go to url https://duck.com">
-  Go Search
+<button _="on click go to /about">
+  About Page
 </button>
 
-<button _="on click go to the top of the body">
-  Go To The Top...
+<button _="on click go to `https://example.com/${page}`">
+  Dynamic Navigation
 </button>
 
-<button _="on click go to the top of #a-div -20px">
-  Go To The Top Of A Div, with 20px of padding in the viewport
+<button _="on click go to /page in new window">
+  Open In New Tab
 </button>
+
+<button _="on click go back">
+  Back
+</button>
+```
+
+### Syntax
+
+```ebnf
+go [to] <expression> [in new window]
+go back
 ```

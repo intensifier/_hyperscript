@@ -1,7 +1,17 @@
 .idea
-/node_modules
-_site
-/HyperTalk Reference 2.4.pdf
 .DS_Store
 *~
 *.icloud
+node_modules/
+coverage/
+coverage-reports/
+dist/
+tmp/
+test/.bundle/
+test-results/
+www/_site/
+tools/jetbrains/.gradle/
+tools/jetbrains/.intellijPlatform/
+tools/jetbrains/build/
+tools/common/tree-sitter-hyperscript/src/
+tools/common/tree-sitter-hyperscript/build/

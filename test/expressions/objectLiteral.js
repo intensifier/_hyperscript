@@ -1,42 +1,62 @@
-describe("the objectLiteral expression", function () {
-	it("empty object literals work", function () {
-		var result = evalHyperScript("{}");
-		result.should.deep.equal({});
-	});
+import {test, expect} from '../fixtures.js'
 
-	it("one field object literal works", function () {
-		var result = evalHyperScript("{foo:true}");
-		result.should.deep.equal({ foo: true });
-	});
+test.describe("the objectLiteral expression", () => {
 
-	it("multi-field object literal works", function () {
-		var result = evalHyperScript("{foo:true, bar:false}");
-		result.should.deep.equal({ foo: true, bar: false });
-	});
+	test("empty object literals work", async ({run}) => {
+		expect(await run("{}")).toEqual({})
+	})
 
-	it("strings work in object literal field names", function () {
-		var result = evalHyperScript('{"foo":true, "bar":false}');
-		result.should.deep.equal({ foo: true, bar: false });
-	});
+	test("one field object literal works", async ({run}) => {
+		expect(await run("{foo:true}")).toEqual({ foo: true })
+	})
 
-	it("hyphens work in object literal field names", function () {
-		var result = evalHyperScript("{-foo:true, bar-baz:false}");
-		result.should.deep.equal({ "-foo": true, "bar-baz": false });
-	});
+	test("multi-field object literal works", async ({run}) => {
+		expect(await run("{foo:true, bar:false}")).toEqual({ foo: true, bar: false })
+	})
 
-	it("allows trailing commans", function () {
-		var result = evalHyperScript("{foo:true, bar-baz:false,}");
-		result.should.deep.equal({ "foo": true, "bar-baz": false });
-	});
+	test("strings work in object literal field names", async ({run}) => {
+		expect(await run('{"foo":true, "bar":false}')).toEqual({ foo: true, bar: false })
+	})
 
-	it("expressions work in object literal field names", function () {
-		window.foo = "bar";
-		window.bar = function () {
-			return "foo";
-		};
-		var result = evalHyperScript("{[foo]:true, [bar()]:false}");
-		result.should.deep.equal({ bar: true, foo: false });
-		delete window.foo;
-		delete window.bar;
-	});
-});
+	test("hyphens work in object literal field names", async ({run}) => {
+		expect(await run("{-foo:true, bar-baz:false}")).toEqual({ "-foo": true, "bar-baz": false })
+	})
+
+	test("allows trailing commas", async ({run}) => {
+		expect(await run("{foo:true, bar-baz:false,}")).toEqual({ "foo": true, "bar-baz": false })
+	})
+
+	test("expressions work in object literal field names", async ({evaluate}) => {
+		const result = await evaluate(() => {
+			window.foo = "bar"
+			window.bar = function () { return "foo" }
+			const r = _hyperscript("{[foo]:true, [bar()]:false}")
+			delete window.foo
+			delete window.bar
+			return r
+		})
+		expect(result).toEqual({ bar: true, foo: false })
+	})
+
+	test("nested object literals work", async ({run}) => {
+		expect(await run("{outer: {inner: 1}}")).toEqual({ outer: { inner: 1 } })
+	})
+
+	test("deeply nested object literals work", async ({run}) => {
+		expect(await run("{a: {b: {c: 'deep'}}}")).toEqual({ a: { b: { c: 'deep' } } })
+	})
+
+	test("object literals can contain arrays", async ({run}) => {
+		expect(await run("{items: [1, 2, 3], count: 3}")).toEqual({ items: [1, 2, 3], count: 3 })
+	})
+
+	test("object literal values can be expressions", async ({run}) => {
+		expect(await run("{sum: 1 + 2, product: 3 * 4}")).toEqual({ sum: 3, product: 12 })
+	})
+
+	test("mixed field name styles in one literal", async ({run}) => {
+		expect(await run('{plain: 1, "quoted": 2, -dashed: 3}')).toEqual({
+			plain: 1, quoted: 2, "-dashed": 3
+		})
+	})
+})

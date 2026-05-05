@@ -4,21 +4,11 @@ title: add - ///_hyperscript
 
 ## The `add` Command
 
-### Syntax
+The `add` command lets you add a CSS class, an HTML attribute, or inline CSS properties to an element. If you don't specify a target, it applies to the current element.
 
-```ebnf
-add <class-ref+ or attribute-ref or object-literal> [to <target-expression>] [where <expr>]
-```
+You can add classes via a [class ref](/expressions/class-reference), attributes via an [attribute ref](/expressions/attribute-ref), or CSS properties via an object literal.
 
-### Description
-
-The `add` command allows you to add a class (via a [class ref](/expressions/class-reference)), an attribute
-(via an [attribute ref](/expressions/attribute-ref)) or CSS attributes (via an object literal) to either the current element or to another element.
-
-The `where` clause allows you filter what elements have the class or property added in the `target`.  The expression will be evaluated for
-each element in `target` and, if the result is true, the element class or property will be added.  If it is false, the class
-or property will be removed.  The `it` symbol will be set to the current element, allowing you to express conditions against each element
-in `target`.  Note that this clause only works with classes and properties.
+The `when` clause lets you filter which elements in the target actually get the addition. The expression is evaluated for each element in the target - if it returns true, the value is added; if false, the value is removed. The `it` symbol is set to the current element being evaluated, so you can express conditions against each element.
 
 ### Examples
 
@@ -34,8 +24,30 @@ in `target`.  Note that this clause only works with classes and properties.
   _="on change add { --accent-color: my.value } to document.body"
 />
 
-<button _="on click add [@disabled='true'] to <button/> when it is not me">Disable Other Buttons</button>
+<button _="on click add @disabled='true' to <button/> when it is not me">Disable Other Buttons</button>
 
-<button _"on click add .{'-foo-bar'} to #that">Add Class With A Dash Prefix!</button>
+<button _="on click add .{'-foo-bar'} to #that">Add Class With A Dash Prefix!</button>
 
+```
+
+### Collections
+
+`add` also works with arrays and sets:
+
+```hyperscript
+add item to myArray                      -- array.push(item)
+add item to mySet                        -- set.add(item)
+```
+
+### See also
+
+- [`remove`](/commands/remove) -- the inverse operation
+- [`take`](/commands/take) -- move a class or attribute from one element to another
+- [`toggle`](/commands/toggle) -- flip a class or attribute on and off
+- [`show`](/commands/show) / [`hide`](/commands/hide) -- also support the `when` clause for per-element filtering
+
+### Syntax
+
+```ebnf
+add (<class-ref>+ | <attribute-ref> | <object-literal> | <expression>) to <target-expression> [when <expression>]
 ```

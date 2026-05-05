@@ -4,27 +4,11 @@ title: repeat - ///_hyperscript
 
 ## The `repeat` Command
 
-### Syntax
+The `repeat` command provides iteration in hyperscript. It supports many forms: collection loops, conditional loops, counted loops, infinite loops, event-driven loops, and bottom-tested loops.
 
-```ebnf
-repeat for <identifier> in <expression> [index <identifier>] { <command> } end
-repeat in <expression> [index <identifier>] { <command> } end
-repeat while <expression> [index <identifier>] { <command> } end
-repeat until <expression> [index <identifier>] { <command> } end
-repeat until event <expression> [from <expression>] [index <identifier>] { <command> } end
-repeat <number> times [index <identifier>] { <command> } end
-repeat forever <expression> [index <identifier>] { <command> } end
-for <identifier> in <expression> [index <identifier>]
-```
+In every form you can track the current iteration index by appending `index <identifier>` (or `indexed by <identifier>`) to the loop specification.
 
-### Description
-
-The `repeat` command provides iteration in the hyperscript language. It is very flexible and supports many forms.
-
-In every form you may assign a named value to the current iteration index by appending a `index i` to the
-loop specification.
-
-Here are examples of all the above forms:
+### Examples
 
 ```hyperscript
   -- the basic for loop
@@ -35,6 +19,12 @@ Here are examples of all the above forms:
   -- syntactic sugar for the above
   for p in <p/>
     add .example to p
+  end
+
+  -- you can iterate over the properties in a javascript object
+  set obj to {foo:1, bar:2}
+  for x in obj
+    log obj[x]
   end
 
   -- iterating over an array but without an explicit variable
@@ -81,4 +71,37 @@ Here are examples of all the above forms:
     wait 1s
   end
 
+  -- else clause runs when the collection is empty or null
+  for item in items
+    log item
+  else
+    log "no items"
+  end
+
+  -- bottom-tested loop: body runs at least once
+  repeat
+    get the next <li/> from me
+    remove .highlight from it
+  until it is null end
+
+  -- bottom-tested with while
+  repeat
+    increment x
+  while x < 10 end
+
+```
+
+### Syntax
+
+```ebnf
+repeat for <identifier> in <expression> [(index | indexed by) <identifier>] <command>* [else <command>*] end
+repeat in <expression> [(index | indexed by) <identifier>] <command>* end
+repeat while <expression> [(index | indexed by) <identifier>] <command>* end
+repeat until <expression> [(index | indexed by) <identifier>] <command>* end
+repeat until event <expression> [from <expression>] [(index | indexed by) <identifier>] <command>* end
+repeat <number> times [(index | indexed by) <identifier>] <command>* end
+repeat forever [(index | indexed by) <identifier>] <command>* end
+repeat <command>* until <expression> end
+repeat <command>* while <expression> end
+for <identifier> in <expression> [(index | indexed by) <identifier>]
 ```
