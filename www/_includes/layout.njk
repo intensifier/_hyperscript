@@ -45,18 +45,18 @@ title: hyperscript
                          end
                        end
 
-                       on input debounced at 200ms
+                       on input
                          if my value is ''
                            empty #search-results
                            add .hidden to #search-results
                            exit
                          end
-                         set val to my value
-                         set response to pagefind.search(val)
-                         set items to response.results[0 .. 9]
+                         set response to pagefind.debouncedSearch(my value, 200)
+                         if response is null exit
+                         set items to response.results[0 .. 4]
+                         set datas to Promise.all(items.map(\ item -> item.data()))
                          set output to ''
-                         repeat for item in items
-                           set info to item.data()
+                         repeat for info in datas
                            set output to output + '<a class=\'search-result\' href=\'' + info.url + '\'>'
                                + '<span class=\'search-result-title\'>' + info.meta.title + '</span>'
                                + '<span class=\'search-result-excerpt\'>' + info.excerpt + '</span>'
@@ -129,7 +129,6 @@ title: hyperscript
 <script type="module">
     window.pagefind = await import("/pagefind/pagefind.js");
     window.pagefind.init();
-    window.pagefind.preload('a');
 </script>
 </body>
 </html>
